@@ -20,10 +20,14 @@ async def main():
     device = GetUberSolarDevices()
     await device.discover()
 
-    logger.info("connecting to device...")
-    uber_smart = UberSmart(device)
-    await uber_smart.get_info()
-    print(uber_smart.status_data)
+    if device._adv_data:
+        logger.info("connecting to device...")
+        for item in device._adv_data:
+            uber_smart = UberSmart(device._adv_data[item].device)
+            await uber_smart.get_info()
+            print(uber_smart.status_data)
+
+    logger.info("Could not find any UberSolar devices in range")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,9 @@
 """UberSolar get device info test."""
-import logging
-import asyncio
 import argparse
+import asyncio
+import logging
 
-from . import UberSmart, GetUberSolarDevices
+from . import GetUberSolarDevices, UberSmart
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,10 @@ async def main(args: argparse.Namespace):
             logger.info("enable ap sta on device...")
             await uber_smart.enable_wifi_ap()
 
+        if args.time:
+            logger.info("setting time on device...")
+            await uber_smart.set_current_time()
+
     else:
         for item in device:
             uber_smart = UberSmart(device[item].device)
@@ -59,6 +63,11 @@ if __name__ == "__main__":
         "--wifiap",
         action="store_true",
         help="enable wifiap on device",
+    )
+    parser.add_argument(
+        "--time",
+        action="store_true",
+        help="Update device date and time",
     )
 
     parser.add_argument(

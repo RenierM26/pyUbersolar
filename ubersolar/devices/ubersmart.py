@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import logging
+import struct
+import time
 from typing import Any
 
 from .device import UberSolarBaseDevice
@@ -44,3 +46,13 @@ class UberSmart(UberSolarBaseDevice):
         # intended for firmware update but who knows.
         await self._send_command(key="14")
         _LOGGER.info("%s: Enable Wifi AP on device", self.name)
+
+    async def set_current_time(self) -> None:
+        """Set current datetime on device."""
+
+        current_time = int(time.time())
+        ct_to_bytearray = bytearray(struct.pack("<Qxxxx", current_time))
+        ct_to_bytearray[9] = 2  # add utc offset on byte 9
+
+        await self._send_command(key=f"09{ct_to_bytearray.hex()}")
+        _LOGGER.info("%s: Send current time to device", self.name)

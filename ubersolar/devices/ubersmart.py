@@ -19,15 +19,6 @@ class UberSmart(UberSolarBaseDevice):
 
         super().__init__(*args, **kwargs)
 
-    async def get_info(self) -> dict[str, Any] | None:
-        """Get device statuses."""
-
-        await self._send_command()
-        if not self.status_data[self._device.address]:
-            _LOGGER.error("%s: Unsuccessful, no result from device", self.name)
-
-        return self.status_data[self._device.address]
-
     async def toggle_switches_all(self, switches: str) -> None:
         """Set pump switch."""
 

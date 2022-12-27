@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 import logging
+import time
 from typing import Any
 from uuid import UUID
 
@@ -27,6 +28,9 @@ _LOGGER = logging.getLogger(__name__)
 # to wait for additional commands for
 # disconnecting the device.
 DISCONNECT_DELAY = 10
+
+# We need to poll to get data
+POLL_INTERVAL = 60
 
 
 class CharacteristicMissingError(Exception):
@@ -83,6 +87,7 @@ class UberSolarBaseDevice:
         self._callbacks: list[Callable[[], None]] = []
         self._notify_future: asyncio.Future[bytearray] | None = None
         self.status_data: dict[str, Any] = {}
+        self._last_full_update: float = -POLL_INTERVAL
 
     async def _send_command(
         self, key: str = "", retry: int | None = None
@@ -350,6 +355,27 @@ class UberSolarBaseDevice:
             self._callbacks.remove(callback)
 
         return _unsub
+
+    async def update(self) -> None:
+        """Get device updates."""
+        await self.get_info()
+        self._last_full_update = time.monotonic()
+        self._fire_callbacks()
+
+    def _fire_callbacks(self) -> None:
+        """Fire callbacks."""
+        _LOGGER.debug("%s: Fire callbacks", self.name)
+        for callback in self._callbacks:
+            callback()
+
+    async def get_info(self) -> dict[str, Any] | None:
+        """Get device statuses."""
+
+        await self._send_command()
+        if not self.status_data[self._device.address]:
+            _LOGGER.error("%s: Unsuccessful, no result from device", self.name)
+
+        return self.status_data[self._device.address]
 
     def _check_command_result(
         self, result: bytes | None, index: int, values: set[int]

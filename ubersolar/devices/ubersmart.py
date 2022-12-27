@@ -23,16 +23,24 @@ class UberSmart(UberSolarBaseDevice):
         await self._send_command()
         if not self.status_data[self._device.address]:
             _LOGGER.error("%s: Unsuccessful, no result from device", self.name)
-            return None
 
         return self.status_data[self._device.address]
 
-    async def set_pump(self) -> dict[str, Any] | None:
+    async def toggle_switches_all(self, switches: str) -> None:
         """Set pump switch."""
 
-        await self._send_command(key="00010002")
-        if not self.status_data[self._device.address]:
-            _LOGGER.error("%s: Unsuccessful, no result from device", self.name)
-            return None
+        # 1st byte is message id, use 06 to toggle switches.
+        # need to send  all switches.
+        # elementToggle, pumpToggle, holidayModeToggle, solenoidMode = 0 - off, 1 - on, 2 - auto
+        # example 0600000002
+        if not len(switches) == 8:
+            _LOGGER.error("Switch length has to be 8")
 
-        return
+        await self._send_command(key=f"06{switches}")
+        _LOGGER.info("%s: Toggle switches", self.name)
+
+    async def enable_wifi_ap(self) -> None:
+        """Enable Wifi ap mode on device."""
+        # intended for firmware update but who knows.
+        await self._send_command(key="14")
+        _LOGGER.info("%s: Enable Wifi AP on device", self.name)

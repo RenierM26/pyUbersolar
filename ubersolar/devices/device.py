@@ -362,6 +362,18 @@ class UberSolarBaseDevice:
         self._last_full_update = time.monotonic()
         self._fire_callbacks()
 
+    def poll_needed(self, seconds_since_last_poll: float | None) -> bool:
+        """Return if device needs polling."""
+        if (
+            seconds_since_last_poll is not None
+            and seconds_since_last_poll < POLL_INTERVAL
+        ):
+            return False
+        time_since_last_full_update = time.monotonic() - self._last_full_update
+        if time_since_last_full_update < POLL_INTERVAL:
+            return False
+        return True
+
     def _fire_callbacks(self) -> None:
         """Fire callbacks."""
         _LOGGER.debug("%s: Fire callbacks", self.name)

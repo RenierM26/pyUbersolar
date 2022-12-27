@@ -6,6 +6,7 @@ setup(
     install_requires=["async_timeout>=4.0.1", "bleak>=0.17.0", "bleak-retry-connector>=2.9.0", "cryptography>=38.0.3"],
     version = "0.0.1",
     description = "A library to communicate with UberSolar devices",
+    long_description= "API for accessing UberSolar UberSmart devices. Communication to/from the device via Bluetooth. Please view readme on github",
     author="Renier Moorcroft",
     url="https://github.com/RenierM26/pyUbersolar",
     license="MIT",

@@ -23,6 +23,7 @@ def process_ubersmart(data: bytearray) -> dict[str, Any]:
             "bHolidayMode": data[3],
             "eSolenoidMode": data[4],
             "fSolenoidState": round(struct.unpack("<f", data[5:9])[0], 2),
+            "AllSwitches": data[:5],
         }
 
     if data[0] == 3:

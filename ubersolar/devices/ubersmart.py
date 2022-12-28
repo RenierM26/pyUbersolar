@@ -20,7 +20,7 @@ class UberSmart(UberSolarBaseDevice):
         super().__init__(*args, **kwargs)
 
     async def toggle_switches_all(self, switches: str) -> None:
-        """Set pump switch."""
+        """Set all switches from hex string."""
 
         # 1st byte is message id, use 06 to toggle switches.
         # need to send  all switches.
@@ -47,3 +47,156 @@ class UberSmart(UberSolarBaseDevice):
 
         await self._send_command(key=f"09{ct_to_bytearray.hex()}")
         _LOGGER.info("%s: Send current time to device", self.name)
+
+    async def turn_on_element(self) -> None:
+        """Turn element switch on."""
+
+        if not self.status_data:
+            await self.update()
+
+        current_switches = self.status_data["AllSwitches"]
+
+        if not len(current_switches) == 5:
+            _LOGGER.error("Switch length has to be 5 bytes")
+
+        current_switches[0] = 6
+        current_switches[1] = 1
+
+        await self._send_command(key=current_switches.hex())
+        _LOGGER.info("%s: Turn Element On", self.name)
+
+    async def turn_off_element(self) -> None:
+        """Turn element switch off."""
+
+        if not self.status_data:
+            await self.update()
+
+        current_switches = self.status_data["AllSwitches"]
+
+        if not len(current_switches) == 5:
+            _LOGGER.error("Switch length has to be 5 bytes")
+
+        current_switches[0] = 6
+        current_switches[1] = 0
+
+        await self._send_command(key=current_switches.hex())
+        _LOGGER.info("%s: Turn Element Off", self.name)
+
+    async def turn_on_pump(self) -> None:
+        """Turn pump switch on."""
+
+        if not self.status_data:
+            await self.update()
+
+        current_switches = self.status_data["AllSwitches"]
+
+        if not len(current_switches) == 5:
+            _LOGGER.error("Switch length has to be 5 bytes")
+
+        current_switches[0] = 6
+        current_switches[2] = 1
+
+        await self._send_command(key=current_switches.hex())
+        _LOGGER.info("%s: Turn Pump On", self.name)
+
+    async def turn_off_pump(self) -> None:
+        """Turn pump switch off."""
+
+        if not self.status_data:
+            await self.update()
+
+        current_switches = self.status_data["AllSwitches"]
+
+        if not len(current_switches) == 5:
+            _LOGGER.error("Switch length has to be 5 bytes")
+
+        current_switches[0] = 6
+        current_switches[2] = 0
+
+        await self._send_command(key=current_switches.hex())
+        _LOGGER.info("%s: Turn Pump Off", self.name)
+
+    async def turn_on_holiday(self) -> None:
+        """Turn holiday switch on."""
+
+        if not self.status_data:
+            await self.update()
+
+        current_switches = self.status_data["AllSwitches"]
+
+        if not len(current_switches) == 5:
+            _LOGGER.error("Switch length has to be 5 bytes")
+
+        current_switches[0] = 6
+        current_switches[3] = 1
+
+        await self._send_command(key=current_switches.hex())
+        _LOGGER.info("%s: Turn Holiday On", self.name)
+
+    async def turn_off_holiday(self) -> None:
+        """Turn holiday switch off."""
+
+        if not self.status_data:
+            await self.update()
+
+        current_switches = self.status_data["AllSwitches"]
+
+        if not len(current_switches) == 5:
+            _LOGGER.error("Switch length has to be 5 bytes")
+
+        current_switches[0] = 6
+        current_switches[3] = 0
+
+        await self._send_command(key=current_switches.hex())
+        _LOGGER.info("%s: Turn Holiday Off", self.name)
+
+    async def set_solinoid_off(self) -> None:
+        """Turn Solinoid off."""
+
+        if not self.status_data:
+            await self.update()
+
+        current_switches = self.status_data["AllSwitches"]
+
+        if not len(current_switches) == 5:
+            _LOGGER.error("Switch length has to be 5 bytes")
+
+        current_switches[0] = 6
+        current_switches[4] = 0
+
+        await self._send_command(key=current_switches.hex())
+        _LOGGER.info("%s: Turn Solinoid Off", self.name)
+
+    async def set_solinoid_on(self) -> None:
+        """Turn Solinoid on."""
+
+        if not self.status_data:
+            await self.update()
+
+        current_switches = self.status_data["AllSwitches"]
+
+        if not len(current_switches) == 5:
+            _LOGGER.error("Switch length has to be 5 bytes")
+
+        current_switches[0] = 6
+        current_switches[4] = 1
+
+        await self._send_command(key=current_switches.hex())
+        _LOGGER.info("%s: Turn Solinoid On", self.name)
+
+    async def set_solinoid_auto(self) -> None:
+        """Set Solinoid to Auto."""
+
+        if not self.status_data:
+            await self.update()
+
+        current_switches = self.status_data["AllSwitches"]
+
+        if not len(current_switches) == 5:
+            _LOGGER.error("Switch length has to be 5 bytes")
+
+        current_switches[0] = 6
+        current_switches[4] = 2
+
+        await self._send_command(key=current_switches.hex())
+        _LOGGER.info("%s: Turn Solinoid to Auto", self.name)

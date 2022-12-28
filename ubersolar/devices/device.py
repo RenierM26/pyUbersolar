@@ -27,7 +27,7 @@ _LOGGER = logging.getLogger(__name__)
 # How long to hold the connection
 # to wait for additional commands for
 # disconnecting the device.
-DISCONNECT_DELAY = 10
+DISCONNECT_DELAY = 8.5
 
 # We need to poll to get data
 POLL_INTERVAL = 60
@@ -328,7 +328,7 @@ class UberSolarBaseDevice:
 
         self.status_data[self._device.address] = {}
         await self._client.start_notify(self._read_char, self._notification_handler)
-        await asyncio.sleep(DISCONNECT_DELAY - 0.5)
+        await asyncio.sleep(5)
         await self._client.stop_notify(self._read_char)
 
     async def _execute_command_locked(self, command: bytes) -> None:
@@ -356,11 +356,12 @@ class UberSolarBaseDevice:
 
         return _unsub
 
-    async def update(self) -> None:
+    async def update(self) -> bool:
         """Get device updates."""
         await self.get_info()
         self._last_full_update = time.monotonic()
         self._fire_callbacks()
+        return True
 
     def poll_needed(self, seconds_since_last_poll: float | None) -> bool:
         """Return if device needs polling."""

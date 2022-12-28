@@ -12,9 +12,9 @@ def process_ubersmart(data: bytearray) -> dict[str, Any]:
     if data[0] == 1:
         return {
             "temps": {
-                "fWaterTemperature": struct.unpack("<f", data[1:5])[0],
-                "fManifoldTemperature": struct.unpack("<f", data[5:9])[0],
-                "fStoredWater": struct.unpack("<f", data[9:13])[0],
+                "fWaterTemperature": round(struct.unpack("<f", data[1:5])[0], 2),
+                "fManifoldTemperature": round(struct.unpack("<f", data[5:9])[0], 2),
+                "fStoredWater": round(struct.unpack("<f", data[9:13])[0], 2),
             }
         }
 
@@ -25,7 +25,7 @@ def process_ubersmart(data: bytearray) -> dict[str, Any]:
                 "bPumpOn": data[2],
                 "bHolidayMode": data[3],
                 "eSolenoidMode": data[4],
-                "fSolenoidState": struct.unpack("<f", data[5:9])[0],
+                "fSolenoidState": round(struct.unpack("<f", data[5:9])[0], 2),
             }
         }
 
@@ -36,7 +36,7 @@ def process_ubersmart(data: bytearray) -> dict[str, Any]:
                 "lluTime": datetime.datetime.fromtimestamp(_llu_time).strftime(
                     "%Y-%m-%d %H:%M:%S"
                 ),
-                "fHours": struct.unpack("<f", data[9:13])[0],  # Time on
+                "fHours": round(struct.unpack("<f", data[9:13])[0], 2),  # Time on
                 "wLux": struct.unpack("<H", data[13:15])[0],
             }
         }
@@ -45,10 +45,10 @@ def process_ubersmart(data: bytearray) -> dict[str, Any]:
         return {
             "diag2": {
                 "wRSSI": struct.unpack("<h", data[1:3])[0],
-                "fPanelVoltage": struct.unpack("<f", data[3:7])[0],
-                "fChipTemp": struct.unpack("<f", data[7:11])[0],
-                "fWaterLevel": struct.unpack("<f", data[11:15])[0],
-                "fTankSize": struct.unpack("<f", data[15:19])[0],
+                "fPanelVoltage": round(struct.unpack("<f", data[3:7])[0], 2),
+                "fChipTemp": round(struct.unpack("<f", data[7:11])[0], 2),
+                "fWaterLevel": round(struct.unpack("<f", data[11:15])[0], 2),
+                "fTankSize": round(struct.unpack("<f", data[15:19])[0], 2),
             }
         }
 

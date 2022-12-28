@@ -54,7 +54,7 @@ class UberSmart(UberSolarBaseDevice):
         if not self.status_data:
             await self.update()
 
-        current_switches = self.status_data["AllSwitches"]
+        current_switches = self.status_data[self._device.address]["AllSwitches"]
 
         if not len(current_switches) == 5:
             _LOGGER.error("Switch length has to be 5 bytes")
@@ -71,7 +71,7 @@ class UberSmart(UberSolarBaseDevice):
         if not self.status_data:
             await self.update()
 
-        current_switches = self.status_data["AllSwitches"]
+        current_switches = self.status_data[self._device.address]["AllSwitches"]
 
         if not len(current_switches) == 5:
             _LOGGER.error("Switch length has to be 5 bytes")
@@ -88,7 +88,7 @@ class UberSmart(UberSolarBaseDevice):
         if not self.status_data:
             await self.update()
 
-        current_switches = self.status_data["AllSwitches"]
+        current_switches = self.status_data[self._device.address]["AllSwitches"]
 
         if not len(current_switches) == 5:
             _LOGGER.error("Switch length has to be 5 bytes")
@@ -105,7 +105,7 @@ class UberSmart(UberSolarBaseDevice):
         if not self.status_data:
             await self.update()
 
-        current_switches = self.status_data["AllSwitches"]
+        current_switches = self.status_data[self._device.address]["AllSwitches"]
 
         if not len(current_switches) == 5:
             _LOGGER.error("Switch length has to be 5 bytes")
@@ -122,7 +122,7 @@ class UberSmart(UberSolarBaseDevice):
         if not self.status_data:
             await self.update()
 
-        current_switches = self.status_data["AllSwitches"]
+        current_switches = self.status_data[self._device.address]["AllSwitches"]
 
         if not len(current_switches) == 5:
             _LOGGER.error("Switch length has to be 5 bytes")
@@ -139,7 +139,7 @@ class UberSmart(UberSolarBaseDevice):
         if not self.status_data:
             await self.update()
 
-        current_switches = self.status_data["AllSwitches"]
+        current_switches = self.status_data[self._device.address]["AllSwitches"]
 
         if not len(current_switches) == 5:
             _LOGGER.error("Switch length has to be 5 bytes")
@@ -156,7 +156,7 @@ class UberSmart(UberSolarBaseDevice):
         if not self.status_data:
             await self.update()
 
-        current_switches = self.status_data["AllSwitches"]
+        current_switches = self.status_data[self._device.address]["AllSwitches"]
 
         if not len(current_switches) == 5:
             _LOGGER.error("Switch length has to be 5 bytes")
@@ -173,7 +173,7 @@ class UberSmart(UberSolarBaseDevice):
         if not self.status_data:
             await self.update()
 
-        current_switches = self.status_data["AllSwitches"]
+        current_switches = self.status_data[self._device.address]["AllSwitches"]
 
         if not len(current_switches) == 5:
             _LOGGER.error("Switch length has to be 5 bytes")
@@ -190,7 +190,7 @@ class UberSmart(UberSolarBaseDevice):
         if not self.status_data:
             await self.update()
 
-        current_switches = self.status_data["AllSwitches"]
+        current_switches = self.status_data[self._device.address]["AllSwitches"]
 
         if not len(current_switches) == 5:
             _LOGGER.error("Switch length has to be 5 bytes")

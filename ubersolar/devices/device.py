@@ -329,7 +329,6 @@ class UberSolarBaseDevice:
         self.status_data[self._device.address] = {}
         await self._client.start_notify(self._read_char, self._notification_handler)
         await asyncio.sleep(3)
-        await self._client.stop_notify(self._read_char)
 
     async def _execute_command_locked(self, command: bytes) -> None:
         """Execute command and read response."""

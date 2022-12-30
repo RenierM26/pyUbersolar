@@ -86,7 +86,7 @@ class UberSolarBaseDevice:
         self.loop = asyncio.get_event_loop()
         self._callbacks: list[Callable[[], None]] = []
         self._notify_future: asyncio.Future[bytearray] | None = None
-        self.status_data: dict[str, Any] = {}
+        self.status_data: dict[str, Any] = {device.address: {}}
         self._last_full_update: float = -POLL_INTERVAL
 
     async def _send_command(
@@ -326,7 +326,6 @@ class UberSolarBaseDevice:
         """Start notification."""
         _LOGGER.debug("%s: Subscribe to notifications; RSSI: %s", self.name, self.rssi)
 
-        self.status_data[self._device.address] = {}
         await self._client.start_notify(self._read_char, self._notification_handler)
         await asyncio.sleep(3)
 

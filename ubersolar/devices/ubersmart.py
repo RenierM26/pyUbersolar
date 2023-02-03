@@ -95,6 +95,7 @@ class UberSmart(UberSolarBaseDevice):
             _LOGGER.error("Switch length has to be 5 bytes")
 
         current_switches[0] = 6
+        current_switches[1] = 0 # Pump and element can't be on at same time.
         current_switches[2] = 1
 
         await self._send_command(key=current_switches.hex())

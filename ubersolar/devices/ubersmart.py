@@ -61,6 +61,7 @@ class UberSmart(UberSolarBaseDevice):
 
         current_switches[0] = 6
         current_switches[1] = 1
+        current_switches[2] = 0 # Pump can't be on as well.
 
         await self._send_command(key=current_switches.hex())
         _LOGGER.info("%s: Turn Element On", self.name)

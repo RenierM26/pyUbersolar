@@ -5,7 +5,7 @@ import asyncio
 from collections.abc import Callable
 import logging
 import time
-from typing import Any
+from typing import Any, TypeVar, cast
 from uuid import UUID
 
 from bleak import BleakError
@@ -62,6 +62,21 @@ WRITE_CHAR_UUID = _uuid(comms_type="rx")
 SERVICE_CHAR_UUID = _uuid()
 FW_CHAR_UUID = _uuid(comms_type="FWVersion")
 
+WrapFuncType = TypeVar("WrapFuncType", bound=Callable[..., Any])
+
+
+def update_after_operation(func: WrapFuncType) -> WrapFuncType:
+    """Define a wrapper to update after an operation."""
+
+    async def _async_update_after_operation_wrap(
+        self: UberSolarBaseDevice, *args: Any, **kwargs: Any
+    ) -> None:
+        ret = await func(self, *args, **kwargs)
+        await self.update()
+        return ret
+
+    return cast(WrapFuncType, _async_update_after_operation_wrap)
+
 
 class UberSolarBaseDevice:
     """Base Representation of a UberSolar Device."""
@@ -88,6 +103,7 @@ class UberSolarBaseDevice:
         self._notify_future: asyncio.Future[bytearray] | None = None
         self.status_data: dict[str, Any] = {device.address: {}}
         self._last_full_update: float = -POLL_INTERVAL
+        self._timed_disconnect_task: asyncio.Task[None] | None = None
 
     async def _send_command(
         self, key: str = "", retry: int | None = None
@@ -101,9 +117,8 @@ class UberSolarBaseDevice:
         max_attempts = retry + 1
         if self._operation_lock.locked():
             _LOGGER.debug(
-                "%s: Operation already in progress, waiting for it to complete; RSSI: %s",
+                "%s: Operation already in progress, waiting for it to complete",
                 self.name,
-                self.rssi,
             )
         async with self._operation_lock:
             for attempt in range(max_attempts):
@@ -111,36 +126,32 @@ class UberSolarBaseDevice:
                     return await self._send_command_locked(command)
                 except BleakNotFoundError:
                     _LOGGER.error(
-                        "%s: device not found, no longer in range, or poor RSSI: %s",
+                        "%s: device not found, no longer in range, or poor RSSI",
                         self.name,
-                        self.rssi,
                         exc_info=True,
                     )
                     raise
                 except CharacteristicMissingError as ex:
                     if attempt == retry:
                         _LOGGER.error(
-                            "%s: characteristic missing: %s; Stopping trying; RSSI: %s",
+                            "%s: characteristic missing: %s; Stopping trying",
                             self.name,
                             ex,
-                            self.rssi,
                             exc_info=True,
                         )
                         raise
 
                     _LOGGER.debug(
-                        "%s: characteristic missing: %s; RSSI: %s",
+                        "%s: characteristic missing: %s",
                         self.name,
                         ex,
-                        self.rssi,
                         exc_info=True,
                     )
                 except BLEAK_RETRY_EXCEPTIONS:
                     if attempt == retry:
                         _LOGGER.error(
-                            "%s: communication failed; Stopping trying; RSSI: %s",
+                            "%s: communication failed; Stopping trying",
                             self.name,
-                            self.rssi,
                             exc_info=True,
                         )
                         raise
@@ -156,18 +167,12 @@ class UberSolarBaseDevice:
         """Return device name."""
         return f"{self._device.name} ({self._device.address})"
 
-    @property
-    def rssi(self) -> int:
-        """Return RSSI of device."""
-        return self._device.rssi
-
     async def _ensure_connected(self) -> None:
         """Ensure connection to device is established."""
         if self._connect_lock.locked():
             _LOGGER.debug(
-                "%s: Connection already in progress, waiting for it to complete; RSSI: %s",
+                "%s: Connection already in progress, waiting for it to complete",
                 self.name,
-                self.rssi,
             )
         if self._client and self._client.is_connected:
             self._reset_disconnect_timer()
@@ -177,7 +182,7 @@ class UberSolarBaseDevice:
             if self._client and self._client.is_connected:
                 self._reset_disconnect_timer()
                 return
-            _LOGGER.debug("%s: Connecting; RSSI: %s", self.name, self.rssi)
+            _LOGGER.debug("%s: Connecting", self.name)
             client: BleakClientWithServiceCache = await establish_connection(
                 BleakClientWithServiceCache,
                 self._device,
@@ -186,16 +191,15 @@ class UberSolarBaseDevice:
                 use_services_cache=True,
                 ble_device_callback=lambda: self._device,
             )
-            _LOGGER.debug("%s: Connected; RSSI: %s", self.name, self.rssi)
+            _LOGGER.debug("%s: Connected", self.name)
 
             try:
                 self._resolve_characteristics(client.services)
             except CharacteristicMissingError as ex:
                 _LOGGER.debug(
-                    "%s: characteristic missing, clearing cache: %s; RSSI: %s",
+                    "%s: characteristic missing, clearing cache: %s",
                     self.name,
                     ex,
-                    self.rssi,
                     exc_info=True,
                 )
                 await client.clear_cache()
@@ -226,28 +230,26 @@ class UberSolarBaseDevice:
     def _disconnected(self, client: BleakClientWithServiceCache) -> None:
         """Disconnected callback."""
         if self._expected_disconnect:
-            _LOGGER.debug(
-                "%s: Disconnected from device; RSSI: %s", self.name, self.rssi
-            )
+            _LOGGER.debug("%s: Disconnected from device", self.name)
             return
         _LOGGER.warning(
-            "%s: Device unexpectedly disconnected; RSSI: %s",
+            "%s: Device unexpectedly disconnected",
             self.name,
-            self.rssi,
         )
 
     def _disconnect_from_timer(self) -> None:
         """Disconnect from device."""
         if self._operation_lock.locked() and self._client.is_connected:
             _LOGGER.debug(
-                "%s: Operation in progress, resetting disconnect timer; RSSI: %s",
+                "%s: Operation in progress, resetting disconnect timer",
                 self.name,
-                self.rssi,
             )
             self._reset_disconnect_timer()
             return
         self._cancel_disconnect_timer()
-        asyncio.create_task(self._execute_timed_disconnect())
+        self._timed_disconnect_task = asyncio.create_task(
+            self._execute_timed_disconnect()
+        )
 
     def _cancel_disconnect_timer(self) -> None:
         """Cancel disconnect timer."""
@@ -298,9 +300,8 @@ class UberSolarBaseDevice:
                 # Disconnect so we can reset state and try again
                 await asyncio.sleep(0.25)
                 _LOGGER.debug(
-                    "%s: RSSI: %s; Backing off %ss; Disconnecting due to error: %s",
+                    "%s: Backing off %ss; Disconnecting due to error: %s",
                     self.name,
-                    self.rssi,
                     0.25,
                     ex,
                 )
@@ -309,9 +310,8 @@ class UberSolarBaseDevice:
             except BleakError as ex:
                 # Disconnect so we can reset state and try again
                 _LOGGER.debug(
-                    "%s: RSSI: %s; Disconnecting due to error: %s",
+                    "%s: Disconnecting due to error: %s",
                     self.name,
-                    self.rssi,
                     ex,
                 )
                 await self._execute_forced_disconnect()
@@ -324,7 +324,7 @@ class UberSolarBaseDevice:
 
     async def _start_notify(self) -> None:
         """Start notification."""
-        _LOGGER.debug("%s: Subscribe to notifications; RSSI: %s", self.name, self.rssi)
+        _LOGGER.debug("%s: Subscribe to notifications", self.name)
 
         await self._client.start_notify(self._read_char, self._notification_handler)
         await asyncio.sleep(3)
@@ -395,6 +395,6 @@ class UberSolarBaseDevice:
         if not result or len(result) - 1 < index:
             result_hex = result.hex() if result else "None"
             raise UberSmartOperationError(
-                f"{self.name}: Sending command failed (result={result_hex} index={index} expected={values} rssi={self.rssi})"
+                f"{self.name}: Sending command failed (result={result_hex} index={index} expected={values})"
             )
         return result[index] in values

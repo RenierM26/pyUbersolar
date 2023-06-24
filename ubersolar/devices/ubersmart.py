@@ -6,7 +6,7 @@ import struct
 import time
 from typing import Any
 
-from .device import UberSolarBaseDevice
+from .device import UberSolarBaseDevice, update_after_operation
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ class UberSmart(UberSolarBaseDevice):
 
         super().__init__(*args, **kwargs)
 
+    @update_after_operation
     async def toggle_switches_all(self, switches: str) -> None:
         """Set all switches from hex string."""
 
@@ -26,7 +27,7 @@ class UberSmart(UberSolarBaseDevice):
         # need to send  all switches.
         # elementToggle, pumpToggle, holidayModeToggle, solenoidMode = 0 - off, 1 - on, 2 - auto
         # example 0600000002
-        if not len(switches) == 8:
+        if len(switches) != 8:
             _LOGGER.error("Switch length has to be 8")
 
         await self._send_command(key=f"06{switches}")
@@ -38,6 +39,7 @@ class UberSmart(UberSolarBaseDevice):
         await self._send_command(key="14")
         _LOGGER.info("%s: Enable Wifi AP on device", self.name)
 
+    @update_after_operation
     async def set_current_time(self) -> None:
         """Set current datetime on device."""
 
@@ -48,6 +50,7 @@ class UberSmart(UberSolarBaseDevice):
         await self._send_command(key=f"09{ct_to_bytearray.hex()}")
         _LOGGER.info("%s: Send current time to device", self.name)
 
+    @update_after_operation
     async def turn_on_element(self) -> None:
         """Turn element switch on."""
 
@@ -56,16 +59,17 @@ class UberSmart(UberSolarBaseDevice):
 
         current_switches = self.status_data[self._device.address]["AllSwitches"]
 
-        if not len(current_switches) == 5:
+        if len(current_switches) != 5:
             _LOGGER.error("Switch length has to be 5 bytes")
 
         current_switches[0] = 6
         current_switches[1] = 1
-        current_switches[2] = 0 # Pump can't be on as well.
+        current_switches[2] = 0  # Pump can't be on as well.
 
         await self._send_command(key=current_switches.hex())
         _LOGGER.info("%s: Turn Element On", self.name)
 
+    @update_after_operation
     async def turn_off_element(self) -> None:
         """Turn element switch off."""
 
@@ -74,7 +78,7 @@ class UberSmart(UberSolarBaseDevice):
 
         current_switches = self.status_data[self._device.address]["AllSwitches"]
 
-        if not len(current_switches) == 5:
+        if len(current_switches) != 5:
             _LOGGER.error("Switch length has to be 5 bytes")
 
         current_switches[0] = 6
@@ -83,6 +87,7 @@ class UberSmart(UberSolarBaseDevice):
         await self._send_command(key=current_switches.hex())
         _LOGGER.info("%s: Turn Element Off", self.name)
 
+    @update_after_operation
     async def turn_on_pump(self) -> None:
         """Turn pump switch on."""
 
@@ -91,16 +96,17 @@ class UberSmart(UberSolarBaseDevice):
 
         current_switches = self.status_data[self._device.address]["AllSwitches"]
 
-        if not len(current_switches) == 5:
+        if len(current_switches) != 5:
             _LOGGER.error("Switch length has to be 5 bytes")
 
         current_switches[0] = 6
-        current_switches[1] = 0 # Pump and element can't be on at same time.
+        current_switches[1] = 0  # Pump and element can't be on at same time.
         current_switches[2] = 1
 
         await self._send_command(key=current_switches.hex())
         _LOGGER.info("%s: Turn Pump On", self.name)
 
+    @update_after_operation
     async def turn_off_pump(self) -> None:
         """Turn pump switch off."""
 
@@ -109,7 +115,7 @@ class UberSmart(UberSolarBaseDevice):
 
         current_switches = self.status_data[self._device.address]["AllSwitches"]
 
-        if not len(current_switches) == 5:
+        if len(current_switches) != 5:
             _LOGGER.error("Switch length has to be 5 bytes")
 
         current_switches[0] = 6
@@ -118,6 +124,7 @@ class UberSmart(UberSolarBaseDevice):
         await self._send_command(key=current_switches.hex())
         _LOGGER.info("%s: Turn Pump Off", self.name)
 
+    @update_after_operation
     async def turn_on_holiday(self) -> None:
         """Turn holiday switch on."""
 
@@ -126,7 +133,7 @@ class UberSmart(UberSolarBaseDevice):
 
         current_switches = self.status_data[self._device.address]["AllSwitches"]
 
-        if not len(current_switches) == 5:
+        if len(current_switches) != 5:
             _LOGGER.error("Switch length has to be 5 bytes")
 
         current_switches[0] = 6
@@ -135,6 +142,7 @@ class UberSmart(UberSolarBaseDevice):
         await self._send_command(key=current_switches.hex())
         _LOGGER.info("%s: Turn Holiday On", self.name)
 
+    @update_after_operation
     async def turn_off_holiday(self) -> None:
         """Turn holiday switch off."""
 
@@ -143,7 +151,7 @@ class UberSmart(UberSolarBaseDevice):
 
         current_switches = self.status_data[self._device.address]["AllSwitches"]
 
-        if not len(current_switches) == 5:
+        if len(current_switches) != 5:
             _LOGGER.error("Switch length has to be 5 bytes")
 
         current_switches[0] = 6
@@ -152,6 +160,7 @@ class UberSmart(UberSolarBaseDevice):
         await self._send_command(key=current_switches.hex())
         _LOGGER.info("%s: Turn Holiday Off", self.name)
 
+    @update_after_operation
     async def set_solinoid_off(self) -> None:
         """Turn Solinoid off."""
 
@@ -160,7 +169,7 @@ class UberSmart(UberSolarBaseDevice):
 
         current_switches = self.status_data[self._device.address]["AllSwitches"]
 
-        if not len(current_switches) == 5:
+        if len(current_switches) != 5:
             _LOGGER.error("Switch length has to be 5 bytes")
 
         current_switches[0] = 6
@@ -169,6 +178,7 @@ class UberSmart(UberSolarBaseDevice):
         await self._send_command(key=current_switches.hex())
         _LOGGER.info("%s: Turn Solinoid Off", self.name)
 
+    @update_after_operation
     async def set_solinoid_on(self) -> None:
         """Turn Solinoid on."""
 
@@ -177,7 +187,7 @@ class UberSmart(UberSolarBaseDevice):
 
         current_switches = self.status_data[self._device.address]["AllSwitches"]
 
-        if not len(current_switches) == 5:
+        if len(current_switches) != 5:
             _LOGGER.error("Switch length has to be 5 bytes")
 
         current_switches[0] = 6
@@ -186,6 +196,7 @@ class UberSmart(UberSolarBaseDevice):
         await self._send_command(key=current_switches.hex())
         _LOGGER.info("%s: Turn Solinoid On", self.name)
 
+    @update_after_operation
     async def set_solinoid_auto(self) -> None:
         """Set Solinoid to Auto."""
 
@@ -194,7 +205,7 @@ class UberSmart(UberSolarBaseDevice):
 
         current_switches = self.status_data[self._device.address]["AllSwitches"]
 
-        if not len(current_switches) == 5:
+        if len(current_switches) != 5:
             _LOGGER.error("Switch length has to be 5 bytes")
 
         current_switches[0] = 6

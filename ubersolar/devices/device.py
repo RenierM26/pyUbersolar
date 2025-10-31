@@ -63,20 +63,23 @@ READ_CHAR_UUID = _uuid(comms_type="tx")
 WRITE_CHAR_UUID = _uuid(comms_type="rx")
 SERVICE_CHAR_UUID = _uuid()
 FW_CHAR_UUID = _uuid(comms_type="FWVersion")
+EMPTY_COMMAND = b""
 
-WrapFuncType = TypeVar("WrapFuncType", bound=Callable[..., Awaitable[Any]])
+FuncT = TypeVar("FuncT", bound=Callable[..., Awaitable[Any]])
 
 
-def update_after_operation(func: WrapFuncType) -> WrapFuncType:
+def update_after_operation(func: FuncT) -> FuncT:
     """Define a wrapper to update after an operation."""
 
     async def _async_update_after_operation_wrap(
-        self: UberSolarBaseDevice, *args: Any, **kwargs: Any
-    ) -> None:
-        await func(self, *args, **kwargs)
+        *args: Any, **kwargs: Any
+    ) -> Any:
+        self = cast("UberSolarBaseDevice", args[0])
+        result = await func(*args, **kwargs)
         await self.update()
+        return result
 
-    return cast(WrapFuncType, _async_update_after_operation_wrap)
+    return cast(FuncT, _async_update_after_operation_wrap)
 
 
 class UberSolarBaseDevice:
@@ -293,7 +296,7 @@ class UberSolarBaseDevice:
     async def _send_command_locked(self, command: bytes | bytearray) -> None:
         """Send command to device and read response."""
         await self._ensure_connected()
-        if command != b"":
+        if command != EMPTY_COMMAND:
             try:
                 command_bytes = bytes(command)
                 await self._execute_command_locked(command_bytes)
@@ -377,9 +380,7 @@ class UberSolarBaseDevice:
         ):
             return False
         time_since_last_full_update = time.monotonic() - self._last_full_update
-        if time_since_last_full_update < POLL_INTERVAL:
-            return False
-        return True
+        return not time_since_last_full_update < POLL_INTERVAL
 
     def _fire_callbacks(self) -> None:
         """Fire callbacks."""

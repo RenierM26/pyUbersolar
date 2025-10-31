@@ -1,4 +1,5 @@
 """Library to handle connection with UberSolar."""
+
 from __future__ import annotations
 
 import asyncio
@@ -18,11 +19,10 @@ from bleak_retry_connector import (
     BleakNotFoundError,
     establish_connection,
 )
-from custom_components.ubersolar.ubersolar.adv_parsers.ubersmart import (
-    process_ubersmart,
-)
-from custom_components.ubersolar.ubersolar.const import DEFAULT_RETRY_COUNT
-from custom_components.ubersolar.ubersolar.models import UberSmartStatus
+
+from ubersolar.adv_parsers.ubersmart import process_ubersmart
+from ubersolar.const import DEFAULT_RETRY_COUNT
+from ubersolar.models import UberSmartStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,9 +71,7 @@ FuncT = TypeVar("FuncT", bound=Callable[..., Awaitable[Any]])
 def update_after_operation(func: FuncT) -> FuncT:
     """Define a wrapper to update after an operation."""
 
-    async def _async_update_after_operation_wrap(
-        *args: Any, **kwargs: Any
-    ) -> Any:
+    async def _async_update_after_operation_wrap(*args: Any, **kwargs: Any) -> Any:
         self = cast("UberSolarBaseDevice", args[0])
         result = await func(*args, **kwargs)
         await self.update()
@@ -105,13 +103,13 @@ class UberSolarBaseDevice:
         self.loop = asyncio.get_event_loop()
         self._callbacks: list[Callable[[], None]] = []
         self._notify_future: asyncio.Future[bytearray] | None = None
-        self.status_data: dict[str, UberSmartStatus] = {device.address: UberSmartStatus()}
+        self.status_data: dict[str, UberSmartStatus] = {
+            device.address: UberSmartStatus()
+        }
         self._last_full_update: float = -POLL_INTERVAL
         self._timed_disconnect_task: asyncio.Task[None] | None = None
 
-    async def _send_command(
-        self, key: str = "", retry: int | None = None
-    ) -> None:
+    async def _send_command(self, key: str = "", retry: int | None = None) -> None:
         """Send command to device and read response."""
         if retry is None:
             retry = self._retry_count

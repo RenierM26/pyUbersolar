@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 import logging
 import time
 from typing import Any, TypeVar, cast
@@ -18,9 +18,11 @@ from bleak_retry_connector import (
     BleakNotFoundError,
     establish_connection,
 )
-
-from ..adv_parsers.ubersmart import process_ubersmart
-from ..const import DEFAULT_RETRY_COUNT
+from custom_components.ubersolar.ubersolar.adv_parsers.ubersmart import (
+    process_ubersmart,
+)
+from custom_components.ubersolar.ubersolar.const import DEFAULT_RETRY_COUNT
+from custom_components.ubersolar.ubersolar.models import UberSmartStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,7 +64,7 @@ WRITE_CHAR_UUID = _uuid(comms_type="rx")
 SERVICE_CHAR_UUID = _uuid()
 FW_CHAR_UUID = _uuid(comms_type="FWVersion")
 
-WrapFuncType = TypeVar("WrapFuncType", bound=Callable[..., Any])
+WrapFuncType = TypeVar("WrapFuncType", bound=Callable[..., Awaitable[Any]])
 
 
 def update_after_operation(func: WrapFuncType) -> WrapFuncType:
@@ -71,9 +73,8 @@ def update_after_operation(func: WrapFuncType) -> WrapFuncType:
     async def _async_update_after_operation_wrap(
         self: UberSolarBaseDevice, *args: Any, **kwargs: Any
     ) -> None:
-        ret = await func(self, *args, **kwargs)
+        await func(self, *args, **kwargs)
         await self.update()
-        return ret
 
     return cast(WrapFuncType, _async_update_after_operation_wrap)
 
@@ -101,13 +102,13 @@ class UberSolarBaseDevice:
         self.loop = asyncio.get_event_loop()
         self._callbacks: list[Callable[[], None]] = []
         self._notify_future: asyncio.Future[bytearray] | None = None
-        self.status_data: dict[str, Any] = {device.address: {}}
+        self.status_data: dict[str, UberSmartStatus] = {device.address: UberSmartStatus()}
         self._last_full_update: float = -POLL_INTERVAL
         self._timed_disconnect_task: asyncio.Task[None] | None = None
 
     async def _send_command(
         self, key: str = "", retry: int | None = None
-    ) -> bytes | None:
+    ) -> None:
         """Send command to device and read response."""
         if retry is None:
             retry = self._retry_count
@@ -123,21 +124,18 @@ class UberSolarBaseDevice:
         async with self._operation_lock:
             for attempt in range(max_attempts):
                 try:
-                    return await self._send_command_locked(command)
+                    await self._send_command_locked(command)
                 except BleakNotFoundError:
-                    _LOGGER.error(
+                    _LOGGER.exception(
                         "%s: device not found, no longer in range, or poor RSSI",
                         self.name,
-                        exc_info=True,
                     )
                     raise
                 except CharacteristicMissingError as ex:
                     if attempt == retry:
-                        _LOGGER.error(
-                            "%s: characteristic missing: %s; Stopping trying",
+                        _LOGGER.exception(
+                            "%s: characteristic missing; Stopping trying",
                             self.name,
-                            ex,
-                            exc_info=True,
                         )
                         raise
 
@@ -149,16 +147,17 @@ class UberSolarBaseDevice:
                     )
                 except BLEAK_RETRY_EXCEPTIONS:
                     if attempt == retry:
-                        _LOGGER.error(
+                        _LOGGER.exception(
                             "%s: communication failed; Stopping trying",
                             self.name,
-                            exc_info=True,
                         )
                         raise
 
                     _LOGGER.debug(
                         "%s: communication failed with:", self.name, exc_info=True
                     )
+                else:
+                    return
 
         raise RuntimeError("Unreachable")
 
@@ -239,7 +238,8 @@ class UberSolarBaseDevice:
 
     def _disconnect_from_timer(self) -> None:
         """Disconnect from device."""
-        if self._operation_lock.locked() and self._client.is_connected:
+        client = self._client
+        if self._operation_lock.locked() and client and client.is_connected:
             _LOGGER.debug(
                 "%s: Operation in progress, resetting disconnect timer",
                 self.name,
@@ -290,12 +290,13 @@ class UberSolarBaseDevice:
                 await client.disconnect()
                 _LOGGER.debug("%s: Disconnect completed", self.name)
 
-    async def _send_command_locked(self, command: bytes) -> bytes:
+    async def _send_command_locked(self, command: bytes | bytearray) -> None:
         """Send command to device and read response."""
         await self._ensure_connected()
         if command != b"":
             try:
-                return await self._execute_command_locked(command)
+                command_bytes = bytes(command)
+                await self._execute_command_locked(command_bytes)
             except BleakDBusError as ex:
                 # Disconnect so we can reset state and try again
                 await asyncio.sleep(0.25)
@@ -316,15 +317,23 @@ class UberSolarBaseDevice:
                 )
                 await self._execute_forced_disconnect()
                 raise
+            else:
+                return
 
-    def _notification_handler(self, _sender: int, data: bytearray) -> None:
+    def _notification_handler(
+        self, _sender: BleakGATTCharacteristic, data: bytearray
+    ) -> None:
         """Handle notification responses."""
         _LOGGER.debug("%s: Received notification: %s", self.name, data)
         self.status_data[self._device.address].update(process_ubersmart(data))
+        self._fire_callbacks()
 
     async def _start_notify(self) -> None:
         """Start notification."""
         _LOGGER.debug("%s: Subscribe to notifications", self.name)
+
+        if self._client is None or self._read_char is None:
+            raise RuntimeError("Client not connected; cannot start notifications")
 
         await self._client.start_notify(self._read_char, self._notification_handler)
         await asyncio.sleep(3)
@@ -338,8 +347,6 @@ class UberSolarBaseDevice:
         _LOGGER.debug("%s: Sending command: %s", self.name, command.hex())
         await self._client.write_gatt_char(self._write_char, command, False)
 
-        return
-
     def get_address(self) -> str:
         """Return address of device."""
         return self._device.address
@@ -350,16 +357,17 @@ class UberSolarBaseDevice:
 
         def _unsub() -> None:
             """Unsubscribe from device notifications."""
-            self._callbacks.remove(callback)
+            if callback in self._callbacks:
+                self._callbacks.remove(callback)
 
         return _unsub
 
-    async def update(self) -> bool:
+    async def update(self) -> dict[str, UberSmartStatus]:
         """Get device updates."""
         await self.get_info()
         self._last_full_update = time.monotonic()
         self._fire_callbacks()
-        return True
+        return self.status_data
 
     def poll_needed(self, seconds_since_last_poll: float | None) -> bool:
         """Return if device needs polling."""
@@ -379,7 +387,7 @@ class UberSolarBaseDevice:
         for callback in self._callbacks:
             callback()
 
-    async def get_info(self) -> dict[str, Any] | None:
+    async def get_info(self) -> UberSmartStatus | None:
         """Get device statuses."""
 
         await self._send_command()
@@ -387,6 +395,10 @@ class UberSolarBaseDevice:
             _LOGGER.error("%s: Unsuccessful, no result from device", self.name)
 
         return self.status_data[self._device.address]
+
+    async def async_disconnect(self) -> None:
+        """Forcefully disconnect from the device."""
+        await self._execute_forced_disconnect()
 
     def _check_command_result(
         self, result: bytes | None, index: int, values: set[int]

@@ -8,9 +8,9 @@ from .discovery import GetUberSolarDevices
 from .models import UberSolarAdvertisement
 
 __all__ = [
-    "get_device",
-    "close_stale_connections",
     "GetUberSolarDevices",
-    "UberSolarAdvertisement",
     "UberSmart",
+    "UberSolarAdvertisement",
+    "close_stale_connections",
+    "get_device",
 ]

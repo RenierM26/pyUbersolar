@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyubersolar"
+version = "0.1.3"
+description = "A library to communicate with UberSolar devices"
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Renier Moorcroft" }]
+keywords = ["ubersolar", "bluetooth", "ble", "asyncio", "iot", "home-assistant"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: OS Independent",
+  "Framework :: AsyncIO",
+  "Topic :: Home Automation",
+  "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+dependencies = [
+  "async-timeout>=4.0.1",
+  "bleak>=0.17.0",
+  "bleak-retry-connector>=2.9.0",
+  "cryptography>=38.0.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/RenierM26/pyUbersolar"
+Repository = "https://github.com/RenierM26/pyUbersolar"
+Issues = "https://github.com/RenierM26/pyUbersolar/issues"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["ubersolar*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["ubersolar"]
+
+[tool.ruff.lint]
+select = ["E","F","I","UP","B","SIM","PL","RUF","SLF"]
+ignore = ["E501"] # long URLs ok
+
+# Per-file tuning
+[tool.ruff.lint.per-file-ignores]
+# CLI files are naturally branchy/return-heavy; quiet those here:
+"ubersolar/__main__.py" = ["PLR0911","PLR0912","PLR0915"]
+# Re-export noise in __init__ (if applicable):
+"ubersolar/__init__.py" = ["F401"]
+
+# Import sorting to match HA expectations
+[tool.ruff.lint.isort]
+known-first-party = ["ubersolar"]
+known-third-party = ["homeassistant", "aiohttp", "voluptuous", "yarl", "pandas", "xmltodict", "Crypto"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+combine-as-imports = true
+force-sort-within-sections = true
+
+# Pylint-like thresholds (only if you prefer global relaxation instead of per-file ignores)
+[tool.ruff.lint.pylint]
+allow-magic-value-types = ["int", "str"]
+max-args = 10
+
+[tool.mypy]
+python_version = "3.12"
+files = ["ubersolar"]
+ignore_missing_imports = true
+strict_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_no_return = true
+no_implicit_optional = true
+check_untyped_defs = true
+
+[project.optional-dependencies]
+dev = ["ruff", "mypy", "pytest", "types-requests"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-q"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = ["ubersolar"]

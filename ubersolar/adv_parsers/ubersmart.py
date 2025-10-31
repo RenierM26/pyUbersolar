@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import datetime
 import struct
-from typing import Any
+
+from custom_components.ubersolar.ubersolar.models import UberSmartStatus
 
 
-def process_ubersmart(data: bytearray) -> dict[str, Any]:
+def process_ubersmart(data: bytearray) -> UberSmartStatus:
     """Process UberSmart data."""
 
     if data[0] == 1:

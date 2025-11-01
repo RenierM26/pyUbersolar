@@ -1,9 +1,11 @@
 """UberSolar get device info test."""
+
 import argparse
 import asyncio
 import logging
 
-from . import GetUberSolarDevices, UberSmart
+from ubersolar.devices.ubersmart import UberSmart
+from ubersolar.discovery import GetUberSolarDevices
 
 logger = logging.getLogger(__name__)
 

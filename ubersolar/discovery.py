@@ -7,8 +7,8 @@ import logging
 
 import bleak
 
-from .const import DEFAULT_RETRY_COUNT, DEFAULT_SCAN_TIMEOUT
-from .models import UberSolarAdvertisement
+from ubersolar.const import DEFAULT_RETRY_COUNT, DEFAULT_SCAN_TIMEOUT
+from ubersolar.models import UberSolarAdvertisement
 
 _LOGGER = logging.getLogger(__name__)
 CONNECT_LOCK = asyncio.Lock()

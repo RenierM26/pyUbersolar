@@ -1,9 +1,9 @@
 """Library to handle connection with UberSmart."""
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 import logging
 import struct
-import time
 from typing import Any
 
 from .device import UberSolarBaseDevice, update_after_operation
@@ -39,16 +39,48 @@ class UberSmart(UberSolarBaseDevice):
         await self._send_command(key="14")
         _LOGGER.info("%s: Enable Wifi AP on device", self.name)
 
+    def _build_time_payload(self, value: datetime) -> bytearray:
+        """Build the payload used to set device time."""
+        if value.tzinfo is None:
+            _LOGGER.warning("%s: naive datetime provided; assuming UTC", self.name)
+            value = value.replace(tzinfo=UTC)
+
+        offset = value.utcoffset() or timedelta()
+        offset_seconds = int(offset.total_seconds())
+        offset_hours = int(offset_seconds / 3600)
+        if offset_seconds % 3600 != 0:
+            _LOGGER.warning(
+                "%s: timezone offset %s is not an integer hour; truncating to %s",
+                self.name,
+                offset,
+                offset_hours,
+            )
+        if not -128 <= offset_hours <= 127:
+            _LOGGER.warning(
+                "%s: timezone offset %s out of supported range; clamping",
+                self.name,
+                offset_hours,
+            )
+            offset_hours = max(-128, min(127, offset_hours))
+
+        payload = bytearray(struct.pack("<Qxxxx", int(value.timestamp())))
+        payload[9] = offset_hours & 0xFF
+        return payload
+
+    async def _send_time(self, value: datetime) -> None:
+        payload = self._build_time_payload(value)
+        await self._send_command(key=f"09{payload.hex()}")
+        _LOGGER.info("%s: Send time %s to device", self.name, value.isoformat())
+
+    @update_after_operation
+    async def set_time(self, value: datetime) -> None:
+        """Set provided datetime on device."""
+        await self._send_time(value)
+
     @update_after_operation
     async def set_current_time(self) -> None:
         """Set current datetime on device."""
-
-        current_time = int(time.time())
-        ct_to_bytearray = bytearray(struct.pack("<Qxxxx", current_time))
-        ct_to_bytearray[9] = 2  # add utc offset on byte 9
-
-        await self._send_command(key=f"09{ct_to_bytearray.hex()}")
-        _LOGGER.info("%s: Send current time to device", self.name)
+        await self._send_time(datetime.now(UTC).astimezone())
 
     @update_after_operation
     async def turn_on_element(self) -> None:

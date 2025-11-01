@@ -122,6 +122,7 @@ class UberSolarBaseDevice:
         self._callbacks: list[Callable[[], None]] = []
         self._notify_future: asyncio.Future[bytearray] | None = None
         self._notification_event: asyncio.Event = asyncio.Event()
+        self._initial_blocks_pending: set[int] = set(range(1, 6))
         self.status_data: dict[str, UberSmartStatus] = {
             device.address: UberSmartStatus()
         }
@@ -349,6 +350,9 @@ class UberSolarBaseDevice:
             self.name,
             data.hex(),
         )
+        block_type = data[0] if data else None
+        if block_type:
+            self._initial_blocks_pending.discard(block_type)
         self.status_data[self._device.address].update(process_ubersmart(data))
         self._notification_event.set()
         self._fire_callbacks()
@@ -416,14 +420,20 @@ class UberSolarBaseDevice:
         for callback in self._callbacks:
             callback()
 
+    async def _wait_for_initial_blocks(self) -> None:
+        while self._initial_blocks_pending:
+            await self._notification_event.wait()
+            self._notification_event.clear()
+
     async def get_info(self) -> UberSmartStatus | None:
         """Get device statuses."""
 
         self._notification_event.clear()
+        self._initial_blocks_pending = set(range(1, 6))
         await self._send_command()
-        if not self.status_data[self._device.address]:
+        if self._initial_blocks_pending:
             try:
-                await asyncio.wait_for(self._notification_event.wait(), timeout=2)
+                await asyncio.wait_for(self._wait_for_initial_blocks(), timeout=2)
             except TimeoutError:
                 _LOGGER.error("%s: Unsuccessful, no result from device", self.name)
 

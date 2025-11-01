@@ -69,7 +69,7 @@ P = ParamSpec("P")
 R = TypeVar("R")
 TDevice = TypeVar("TDevice", bound="UberSolarBaseDevice")
 
-def update_after_operation(
+def update_after_operation[TDevice: "UberSolarBaseDevice", **P, R](
     func: Callable[Concatenate[TDevice, P], Awaitable[R]]
 ) -> Callable[Concatenate[TDevice, P], Awaitable[R]]:
     """Define a wrapper to update after an operation."""

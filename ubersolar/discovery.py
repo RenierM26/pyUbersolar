@@ -7,7 +7,7 @@ import logging
 
 import bleak
 
-from .const import DEFAULT_RETRY_COUNT, DEFAULT_SCAN_TIMEOUT
+from .const import DEFAULT_SCAN_TIMEOUT
 from .models import UberSolarAdvertisement
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,8 +39,8 @@ class GetUberSolarDevices:
         self._adv_data[discovery.address] = discovery
 
     async def discover(
-        self, retry: int = DEFAULT_RETRY_COUNT, scan_timeout: int = DEFAULT_SCAN_TIMEOUT
-    ) -> dict:
+        self, scan_timeout: int = DEFAULT_SCAN_TIMEOUT
+    ) -> dict[str, UberSolarAdvertisement]:
         """Find UberSolar devices."""
 
         scanner = bleak.BleakScanner(

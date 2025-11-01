@@ -83,7 +83,7 @@ no_implicit_optional = true
 check_untyped_defs = true
 
 [project.optional-dependencies]
-dev = ["ruff", "mypy", "pytest", "types-requests", "pylint"]
+dev = ["ruff", "mypy", "pytest", "types-requests", "pylint", "setuptools"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"

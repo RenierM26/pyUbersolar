@@ -67,15 +67,15 @@ EMPTY_COMMAND = b""
 
 P = ParamSpec("P")
 R = TypeVar("R")
-TDevice = TypeVar("TDevice", bound="UberSolarBaseDevice")
+_TDevice = TypeVar("_TDevice", bound="UberSolarBaseDevice")
 
 def update_after_operation[TDevice: "UberSolarBaseDevice", **P, R](
-    func: Callable[Concatenate[TDevice, P], Awaitable[R]]
-) -> Callable[Concatenate[TDevice, P], Awaitable[R]]:
+    func: Callable[Concatenate[_TDevice, P], Awaitable[R]]
+) -> Callable[Concatenate[_TDevice, P], Awaitable[R]]:
     """Define a wrapper to update after an operation."""
 
     async def _async_update_after_operation_wrap(
-        self: TDevice, *args: P.args, **kwargs: P.kwargs
+        self: _TDevice, *args: P.args, **kwargs: P.kwargs
     ) -> R:
         result = await func(self, *args, **kwargs)
         await self.update()
@@ -86,6 +86,8 @@ def update_after_operation[TDevice: "UberSolarBaseDevice", **P, R](
 
 class UberSolarBaseDevice:
     """Base Representation of a UberSolar Device."""
+
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -233,7 +235,7 @@ class UberSolarBaseDevice:
             DISCONNECT_DELAY, self._disconnect_from_timer
         )
 
-    def _disconnected(self, client: BleakClientWithServiceCache) -> None:
+    def _disconnected(self, _client: BleakClientWithServiceCache) -> None:
         """Disconnected callback."""
         if self._expected_disconnect:
             _LOGGER.debug("%s: Disconnected from device", self.name)
@@ -300,32 +302,32 @@ class UberSolarBaseDevice:
     async def _send_command_locked(self, command: bytes | bytearray) -> None:
         """Send command to device and read response."""
         await self._ensure_connected()
-        if command != EMPTY_COMMAND:
-            try:
-                command_bytes = bytes(command)
-                await self._execute_command_locked(command_bytes)
-            except BleakDBusError as ex:
-                # Disconnect so we can reset state and try again
-                await asyncio.sleep(0.25)
-                _LOGGER.debug(
-                    "%s: Backing off %ss; Disconnecting due to error: %s",
-                    self.name,
-                    0.25,
-                    ex,
-                )
-                await self._execute_forced_disconnect()
-                raise
-            except BleakError as ex:
-                # Disconnect so we can reset state and try again
-                _LOGGER.debug(
-                    "%s: Disconnecting due to error: %s",
-                    self.name,
-                    ex,
-                )
-                await self._execute_forced_disconnect()
-                raise
-            else:
-                return
+        if command == EMPTY_COMMAND:
+            return
+
+        try:
+            command_bytes = bytes(command)
+            await self._execute_command_locked(command_bytes)
+        except BleakDBusError as ex:
+            # Disconnect so we can reset state and try again
+            await asyncio.sleep(0.25)
+            _LOGGER.debug(
+                "%s: Backing off %ss; Disconnecting due to error: %s",
+                self.name,
+                0.25,
+                ex,
+            )
+            await self._execute_forced_disconnect()
+            raise
+        except BleakError as ex:
+            # Disconnect so we can reset state and try again
+            _LOGGER.debug(
+                "%s: Disconnecting due to error: %s",
+                self.name,
+                ex,
+            )
+            await self._execute_forced_disconnect()
+            raise
 
     def _notification_handler(
         self, _sender: BleakGATTCharacteristic, data: bytearray
@@ -369,7 +371,11 @@ class UberSolarBaseDevice:
     def subscribe(self, callback: Callable[[], None]) -> Callable[[], None]:
         """Subscribe to device notifications."""
         self._callbacks.append(callback)
-        _LOGGER.debug("%s: Registered push callback; total subscribers=%d", self.name, len(self._callbacks))
+        _LOGGER.debug(
+            "%s: Registered push callback; total subscribers=%d",
+            self.name,
+            len(self._callbacks),
+        )
 
         def _unsub() -> None:
             """Unsubscribe from device notifications."""

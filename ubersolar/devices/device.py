@@ -67,15 +67,15 @@ EMPTY_COMMAND = b""
 
 P = ParamSpec("P")
 R = TypeVar("R")
-_TDevice = TypeVar("_TDevice", bound="UberSolarBaseDevice")
+_UberDevice = TypeVar("_UberDevice", bound="UberSolarBaseDevice")
 
-def update_after_operation[TDevice: "UberSolarBaseDevice", **P, R](
-    func: Callable[Concatenate[_TDevice, P], Awaitable[R]]
-) -> Callable[Concatenate[_TDevice, P], Awaitable[R]]:
+def update_after_operation(  # noqa: UP047
+    func: Callable[Concatenate[_UberDevice, P], Awaitable[R]]
+) -> Callable[Concatenate[_UberDevice, P], Awaitable[R]]:
     """Define a wrapper to update after an operation."""
 
     async def _async_update_after_operation_wrap(
-        self: _TDevice, *args: P.args, **kwargs: P.kwargs
+        self: _UberDevice, *args: P.args, **kwargs: P.kwargs
     ) -> R:
         result = await func(self, *args, **kwargs)
         await self.update()

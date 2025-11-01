@@ -343,7 +343,11 @@ class UberSolarBaseDevice:
         self, _sender: BleakGATTCharacteristic, data: bytearray
     ) -> None:
         """Handle notification responses."""
-        _LOGGER.debug("%s: Received notification: %s", self.name, data)
+        _LOGGER.debug(
+            "%s: Received notification: %s",
+            self.name,
+            data.hex(),
+        )
         self.status_data[self._device.address].update(process_ubersmart(data))
         self._fire_callbacks()
 
@@ -373,11 +377,17 @@ class UberSolarBaseDevice:
     def subscribe(self, callback: Callable[[], None]) -> Callable[[], None]:
         """Subscribe to device notifications."""
         self._callbacks.append(callback)
+        _LOGGER.debug("%s: Registered push callback; total subscribers=%d", self.name, len(self._callbacks))
 
         def _unsub() -> None:
             """Unsubscribe from device notifications."""
             if callback in self._callbacks:
                 self._callbacks.remove(callback)
+                _LOGGER.debug(
+                    "%s: Unregistered push callback; total subscribers=%d",
+                    self.name,
+                    len(self._callbacks),
+                )
 
         return _unsub
 

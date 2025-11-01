@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 import logging
 import time
-from typing import Any, Protocol, TypeVar, cast
+from typing import Any, Concatenate, ParamSpec, TypeVar
 from uuid import UUID
 
 from bleak import BleakError
@@ -65,37 +65,23 @@ SERVICE_CHAR_UUID = _uuid()
 FW_CHAR_UUID = _uuid(comms_type="FWVersion")
 EMPTY_COMMAND = b""
 
-_TDevice_contra = TypeVar(
-    "_TDevice_contra", bound="UberSolarBaseDevice", contravariant=True
-)
-_TReturn_co = TypeVar("_TReturn_co", covariant=True)
-
-
-class _OperationFunc(Protocol[_TDevice_contra, _TReturn_co]):
-    """Callable protocol for operations that return awaitables."""
-
-    def __call__(
-        self, __self: _TDevice_contra, /, *args: Any, **kwargs: Any
-    ) -> Awaitable[_TReturn_co]:
-        ...
-
+P = ParamSpec("P")
+R = TypeVar("R")
+TDevice = TypeVar("TDevice", bound="UberSolarBaseDevice")
 
 def update_after_operation(
-    func: _OperationFunc[_TDevice_contra, _TReturn_co]
-) -> _OperationFunc[_TDevice_contra, _TReturn_co]:
+    func: Callable[Concatenate[TDevice, P], Awaitable[R]]
+) -> Callable[Concatenate[TDevice, P], Awaitable[R]]:
     """Define a wrapper to update after an operation."""
 
     async def _async_update_after_operation_wrap(
-        self: _TDevice_contra, *args: Any, **kwargs: Any
-    ) -> _TReturn_co:
+        self: TDevice, *args: P.args, **kwargs: P.kwargs
+    ) -> R:
         result = await func(self, *args, **kwargs)
         await self.update()
         return result
 
-    return cast(
-        _OperationFunc[_TDevice_contra, _TReturn_co],
-        _async_update_after_operation_wrap,
-    )
+    return _async_update_after_operation_wrap
 
 
 class UberSolarBaseDevice:

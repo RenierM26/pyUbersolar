@@ -1,10 +1,11 @@
 """Library to decode UberSmart Response."""
+
 from __future__ import annotations
 
 import datetime
 import struct
 
-from custom_components.ubersolar.ubersolar.models import UberSmartStatus
+from ubersolar.models import UberSmartStatus
 
 
 def process_ubersmart(data: bytearray) -> UberSmartStatus:

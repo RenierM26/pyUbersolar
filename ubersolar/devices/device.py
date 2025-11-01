@@ -359,7 +359,7 @@ class UberSolarBaseDevice:
             raise RuntimeError("Client not connected; cannot start notifications")
 
         await self._client.start_notify(self._read_char, self._notification_handler)
-        await asyncio.sleep(3)
+        await asyncio.sleep(0.5)
 
     async def _execute_command_locked(self, command: bytes) -> None:
         """Execute command and read response."""

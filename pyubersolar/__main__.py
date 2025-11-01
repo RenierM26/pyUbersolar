@@ -4,8 +4,8 @@ import argparse
 import asyncio
 import logging
 
-from ubersolar.devices.ubersmart import UberSmart
-from ubersolar.discovery import GetUberSolarDevices
+from .devices.ubersmart import UberSmart
+from .discovery import GetUberSolarDevices
 
 logger = logging.getLogger(__name__)
 

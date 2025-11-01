@@ -20,9 +20,9 @@ from bleak_retry_connector import (
     establish_connection,
 )
 
-from ubersolar.adv_parsers.ubersmart import process_ubersmart
-from ubersolar.const import DEFAULT_RETRY_COUNT
-from ubersolar.models import UberSmartStatus
+from ..adv_parsers.ubersmart import process_ubersmart
+from ..const import DEFAULT_RETRY_COUNT
+from ..models import UberSmartStatus
 
 _LOGGER = logging.getLogger(__name__)
 

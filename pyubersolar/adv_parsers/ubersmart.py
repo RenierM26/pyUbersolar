@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import struct
 
-from ubersolar.models import UberSmartStatus
+from ..models import UberSmartStatus
 
 
 def process_ubersmart(data: bytearray) -> UberSmartStatus:

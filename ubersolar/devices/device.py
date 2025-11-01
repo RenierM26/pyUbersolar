@@ -69,8 +69,9 @@ P = ParamSpec("P")
 R = TypeVar("R")
 _UberDevice = TypeVar("_UberDevice", bound="UberSolarBaseDevice")
 
-def update_after_operation(  # noqa: UP047
-    func: Callable[Concatenate[_UberDevice, P], Awaitable[R]]
+
+def update_after_operation(
+    func: Callable[Concatenate[_UberDevice, P], Awaitable[R]],
 ) -> Callable[Concatenate[_UberDevice, P], Awaitable[R]]:
     """Define a wrapper to update after an operation."""
 
@@ -442,6 +443,7 @@ class UberSolarBaseDevice:
         if not result or len(result) - 1 < index:
             result_hex = result.hex() if result else "None"
             raise UberSmartOperationError(
-                f"{self.name}: Sending command failed (result={result_hex} index={index} expected={values})"
+                f"{self.name}: Sending command failed (result={result_hex} "
+                f"index={index} expected={values})"
             )
         return result[index] in values

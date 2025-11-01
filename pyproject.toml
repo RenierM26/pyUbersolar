@@ -49,7 +49,7 @@ src = ["ubersolar"]
 
 [tool.ruff.lint]
 select = ["E","F","I","UP","B","SIM","PL","RUF","SLF"]
-ignore = ["E501"] # long URLs ok
+ignore = ["E501", "UP047"] # long URLs ok
 
 # Per-file tuning
 [tool.ruff.lint.per-file-ignores]
